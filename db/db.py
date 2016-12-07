@@ -8,10 +8,10 @@ class Package(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
-    updated = Column(DateTime, nullable=False)
-    created = Column(DateTime, nullable=False, server_default=text('NOW()'))
+    updated = Column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    created = Column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     max_version = Column(String, nullable=False)
-    downloads = Column(Integer, nullable=False)
+    downloads = Column(Integer, nullable=False, default=0)
     description = Column(String)
     repository = Column(String)
 
