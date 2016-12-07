@@ -19,13 +19,13 @@ depends_on = None
 def upgrade():
     op.create_table(
         'packages',
-        sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('name', sa.String),
-        sa.Column('updated', sa.DateTime),
-        sa.Column('created', sa.DateTime),
-        sa.Column('downloads', sa.Integer),
-        sa.Column('description', sa.String),
-        sa.Column('repository', sa.String)
+        sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
+        sa.Column('name', sa.String(), nullable=False),
+        sa.Column('updated', sa.DateTime(), nullable=False),
+        sa.Column('created', sa.DateTime(), nullable=False),
+        sa.Column('downloads', sa.Integer(), nullable=False),
+        sa.Column('description', sa.String(), nullable=True),
+        sa.Column('repository', sa.String(), nullable=True)
     )
 
 def downgrade():

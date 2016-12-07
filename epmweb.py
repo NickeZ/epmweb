@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from flask import Flask
 app = Flask(__name__)
 
-from db import Package
+from db.db import Package
 
 DB = '../db/production.db'
 
@@ -16,18 +16,22 @@ Session = sessionmaker(bind=engine)
 
 @app.route("/")
 def hello():
-    print("hello world")
+    result = "Hello world!\n"
     session = Session()
     for package in session.query(Package).order_by(Package.id):
-        print(package.name)
+        result += "{} {}\n".format(package.created, package.name)
+
+    result += "Goodbye, cruel world!\n"
+    return result
 
 @app.route("/api/v1/packages/new", methods=['PUT'])
 def upload_new_package():
     session = Session()
+    now = datetime.now()
     session.add(Package(
         name="test",
-        updated=datetime.now(),
-        created=datetime.now(),
+        updated=now,
+        created=now,
         description='testtest',
     ))
     session.commit()
