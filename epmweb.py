@@ -14,7 +14,7 @@ import argparse
 # External imports
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
-from flask import Flask, request, redirect, url_for, jsonify, render_template
+from flask import Flask, request, redirect, url_for, jsonify, render_template, send_from_directory
 from flask_api import status
 from flaskext.markdown import Markdown
 from werkzeug.utils import secure_filename
@@ -43,7 +43,7 @@ def about():
 @app.route("/packages/")
 @app.route("/packages/<name>")
 def package(name=None):
-    if name == None:
+    if not name:
         return redirect(url_for('index'))
     session = Session()
     pak = session.query(Package).filter_by(name=name).first()
@@ -67,6 +67,25 @@ def allowed_file(filename):
     return '.' in filename and (
             filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS or
             '.'.join(filename.rsplit('.', 2)[1:]) in ALLOWED_EXTENSIONS)
+
+@app.route("/api/v1/packages/<name>/<chksum>", methods=['GET'])
+def package_download(name=None, chksum=None):
+    if not chksum or chksum == '':
+        return error('Checksum empty')
+    if not name or name == '':
+        return error('Name empty')
+    index_filename = os.path.join('..', 'index', 'packages', name)
+    if not os.path.isfile(index_filename):
+        return error('Invalid name')
+    with open(index_filename) as index:
+        versions = []
+        for line in index:
+            version = json.loads(line)
+            if version['chksum'] == chksum:
+                tarball_filename = '{}-{}-{}.tar.gz'.format(name, version['vers'], chksum)
+                return send_from_directory(app.config['UPLOAD_FOLDER'], tarball_filename, as_attachment=True)
+    return error('Package not found')
+
 
 @app.route("/api/v1/packages", methods=['GET'])
 def packages_list():
