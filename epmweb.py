@@ -55,9 +55,8 @@ def package(name=None):
 
 @app.route("/")
 def index():
-    result = "Hello world!<br>\n"
     session = Session()
-    paks = session.query(Package).order_by(Package.id).all()
+    paks = session.query(Package).order_by(Package.name).all()
     packages = []
     for package in paks:
         packages.append({'package':package, 'versions': session.query(Version).filter_by(package_id=package.id).all() })
