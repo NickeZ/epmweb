@@ -1,15 +1,37 @@
-<!doctype html>
+{% extends "layout.html" %}
 {% set pak = package['package'] %}
-<title>{{ package.name }}</title>
-<p>{{ pak.name }} = "{{ pak.max_version }}"</p>
-<ul>
-    <li>Created: {{ pak.created }}
-    <li>Updated: {{ pak.updated }}
-    <li>Downloads: {{ pak.downloads }}
-    <li>Versions
+{% block title %}{{ pak.name }}{% endblock %}
+{% block body %}
+<div class="row">
+<div class="col s12">
+    <h1>{{ pak.name }}</h1>
+    <p class="flow-text">{{ pak.description|markdown }}</p>
+    </div>
+</div>
+<div class="row">
+<div class="col s6 offset-s3">
+    <div class="card indigo lighten-4">
+        <div class="card-content">
+            <span class="card-title">Epm.toml</span>
+            <p style="font-family:monospace;">{{ pak.name }} = "{{ pak.max_version }}"</p>
+        </div>
+    </div>
+</div>
+</div>
+<div class="row">
+<div class="col s12 m4">
+    <h5>Details</h5>
+    <p>Created: {{ pak.created }}</br>
+    Updated: {{ pak.updated }}</br>
+    Downloads: {{ pak.downloads }}</p>
+</div>
+<div class="col s12 m4">
+    <h5>Versions</h5>
     <ul>
         {% for version in package['versions'] %}
         <li>{{ version.version }} <a href="/static/{{ pak.name }}-{{ version.version}}.tar.gz">Source</a>
         {% endfor %}
     </ul>
-</ul>
+</div>
+</div>
+{% endblock %}

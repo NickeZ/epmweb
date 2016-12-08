@@ -16,6 +16,7 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 from flask import Flask, request, redirect, url_for, jsonify, render_template
 from flask_api import status
+from flaskext.markdown import Markdown
 from werkzeug.utils import secure_filename
 
 # External local imports
@@ -30,8 +31,14 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SERVER_NAME'] = 'epics.ncic.se'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 
+Markdown(app)
+
 engine = sqlalchemy.create_engine('sqlite:///{}'.format(DB), echo=True)
 Session = sessionmaker(bind=engine)
+
+@app.route("/about")
+def about():
+    return render_template('text.html', title='about', message='This is a proof of concept')
 
 @app.route("/packages/")
 @app.route("/packages/<name>")

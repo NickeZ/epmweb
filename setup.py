@@ -1,1 +1,1 @@
-# deps flask, flask-api, sqlalchemy, toml
+# deps flask, flask-api, sqlalchemy, toml, flask-markdown

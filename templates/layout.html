@@ -1,0 +1,24 @@
+<!doctype html>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}" />
+<!-- materialize -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block fulltitle %}{% block title %}{% endblock %} - EPM{% endblock %}</title>
+<body class="grey lighten-4">
+<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+<header class="page-header">
+<div class="container">
+    <div class="row"><div class="col s12"><p><a href="/">EPM</a></p></div></div>
+</div>
+</header>
+<div class="container">
+    {% block body %}{% endblock %}
+</div>
+<footer class="page-footer">
+<div class="container">
+    <div class="row"><div class="col s12"><p><a class="grey-text text-lighten-4" href="/about">About</a></p></div></div>
+</div>
+</footer>
+</body>
