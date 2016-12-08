@@ -6,13 +6,18 @@ import tempfile
 import toml
 import os
 import json
+import re
 import sqlite3
+
+# External imports
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 from flask import Flask, request, redirect, url_for, jsonify
 from flask_api import status
 from werkzeug.utils import secure_filename
-from db.db import Package
+
+# External local imports
+from db.db import Package, Version, User
 
 DB = '../db/production.db'
 UPLOAD_FOLDER = '../public_html/packages'
@@ -26,10 +31,10 @@ Session = sessionmaker(bind=engine)
 
 @app.route("/")
 def hello():
-    result = "Hello world!\n"
+    result = "Hello world!<br>\n"
     session = Session()
     for package in session.query(Package).order_by(Package.id):
-        result += "{} {}\n".format(package.created, package.name)
+        result += "{}<br>\n".format(package)
 
     result += "Goodbye, cruel world!\n"
     return result
@@ -44,7 +49,8 @@ def packages_list():
     session = Session()
     result = []
     for package in session.query(Package).order_by(Package.id):
-        result.append("{} {} {}".format(package.created, package.name, package.max_version))
+        versions = [str(x) for x in session.query(Version).filter_by(package_id=package.id)]
+        result.append({'package':"{}".format(package), 'versions':versions})
     return jsonify(result)
 
 def error(message):
@@ -52,6 +58,28 @@ def error(message):
 
 def ok(message):
     return jsonify({'code': 200, 'message': message})
+
+@app.route('/api/v1/users/new', methods=['POST'])
+def users_new():
+    print(request.form)
+    if 'email' not in request.form.keys():
+        return error('Missing email')
+    session = Session()
+    session.add(User(email=request.form['email']))
+    try:
+        session.commit()
+    except sqlalchemy.exc.IntegrityError as why:
+        return error('Email already exists')
+    return ok('Registered user')
+
+@app.route('/api/v1/users', methods=['GET'])
+def users_list():
+    session = Session()
+    res = []
+    for user in session.query(User):
+        res.append('{}'.format(user))
+    return jsonify(res)
+
 
 @app.route("/api/v1/packages/new", methods=['PUT'])
 def packages_new():
@@ -61,6 +89,7 @@ def packages_new():
     if file.filename == '':
         return error('Empty filename')
     if file and allowed_file(file.filename):
+        session = Session()
         filename = secure_filename(file.filename)
         final_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(final_filename)
@@ -68,8 +97,17 @@ def packages_new():
         subprocess.call('tar xf {} -C {}'.format(final_filename, temporary_dir), shell=True)
         with open(os.path.join(temporary_dir, 'Epm.toml'), 'r') as tomlfile:
             manifest = toml.loads(tomlfile.read())
-        session = Session()
-        now = datetime.now()
+        for author in manifest['project']['authors']:
+            matches = re.search(r'<(.*)>', author)
+            if matches:
+                email = matches.group(1)
+            else:
+                return error('Invalid author information')
+            user = session.query(User).filter_by(email=email).first()
+            if user:
+                break
+        else:
+            return error('User not registered')
         if 'description' in manifest['project']:
             desc = manifest['project']['description']
         else:
@@ -78,14 +116,25 @@ def packages_new():
             repo = manifest['project']['repository']
         else:
             repo = None
-        session.add(Package(
-            name=manifest['project']['name'],
-            updated=now,
-            created=now,
-            max_version=manifest['project']['version'],
-            downloads=0,
-            description=desc,
-            repository=repo,
+        pak = session.query(Package).filter_by(name=manifest['project']['name']).first()
+        if not pak:
+            pak = Package(
+                user_id=user.id,
+                name=manifest['project']['name'],
+                max_version=manifest['project']['version'],
+                description=desc,
+                repository=repo,
+            )
+            session.add(pak)
+            session.commit()
+        else:
+            pak.max_version = manifest['project']['version']
+            pak.description = desc
+            pak.repository = repo
+            pak.updated = datetime.now()
+        session.add(Version(
+            package_id=pak.id,
+            version=manifest['project']['version']
         ))
         session.commit()
     return ok('Uploaded!')
