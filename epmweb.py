@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 from db.db import Package, Version, User
 
 DB = '../db/production.db'
-UPLOAD_FOLDER = '../public_html/packages'
+UPLOAD_FOLDER = '../public_html/static'
 ALLOWED_EXTENSIONS = ['tar.gz']
 
 app = Flask(__name__)
