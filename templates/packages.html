@@ -1,0 +1,13 @@
+<!doctype html>
+<title>EPM</title>
+<ul>
+{% for item in packages %}
+{% set package = item['package'] %}
+<li><a href="/packages/{{ package.name }}">{{ package.name }}</a> {{ package.max_version }} {{ package.authors }}
+    <ul>
+        {% for version in item['versions'] %}
+    <li>{{ version.version }}
+    {% endfor %}
+    </ul>
+{% endfor %}
+</ul>

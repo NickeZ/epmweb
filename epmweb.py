@@ -4,15 +4,17 @@ from datetime import datetime
 import subprocess
 import tempfile
 import toml
+import sys
 import os
 import json
 import re
 import sqlite3
+import argparse
 
 # External imports
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
-from flask import Flask, request, redirect, url_for, jsonify
+from flask import Flask, request, redirect, url_for, jsonify, render_template
 from flask_api import status
 from werkzeug.utils import secure_filename
 
@@ -25,19 +27,35 @@ ALLOWED_EXTENSIONS = ['tar.gz']
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['SERVER_NAME'] = 'epics.ncic.se'
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 engine = sqlalchemy.create_engine('sqlite:///{}'.format(DB), echo=True)
 Session = sessionmaker(bind=engine)
 
+@app.route("/packages/")
+@app.route("/packages/<name>")
+def package(name=None):
+    if name == None:
+        return redirect(url_for('index'))
+    session = Session()
+    pak = session.query(Package).filter_by(name=name).first()
+    if not pak:
+        return render_template('404.html', message="Could not find package")
+    package = {'package':pak, 'versions': session.query(Version).filter_by(package_id=pak.id).all()}
+
+    return render_template('package.html', package=package)
+
 @app.route("/")
-def hello():
+def index():
     result = "Hello world!<br>\n"
     session = Session()
-    for package in session.query(Package).order_by(Package.id):
-        result += "{}<br>\n".format(package)
+    paks = session.query(Package).order_by(Package.id).all()
+    packages = []
+    for package in paks:
+        packages.append({'package':package, 'versions': session.query(Version).filter_by(package_id=package.id).all() })
 
-    result += "Goodbye, cruel world!\n"
-    return result
+    return render_template('packages.html', packages=packages)
 
 def allowed_file(filename):
     return '.' in filename and (
@@ -140,4 +158,10 @@ def packages_new():
     return ok('Uploaded!')
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug',  action='store_true')
+    args = parser.parse_args(sys.argv[1:])
+    if args.debug:
+        app.run(debug=True)
+    else:
+        app.run()

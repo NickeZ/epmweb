@@ -1,0 +1,15 @@
+<!doctype html>
+{% set pak = package['package'] %}
+<title>{{ package.name }}</title>
+<p>{{ pak.name }} = "{{ pak.max_version }}"</p>
+<ul>
+    <li>Created: {{ pak.created }}
+    <li>Updated: {{ pak.updated }}
+    <li>Downloads: {{ pak.downloads }}
+    <li>Versions
+    <ul>
+        {% for version in package['versions'] %}
+        <li>{{ version.version }} <a href="/static/{{ pak.name }}-{{ version.version}}.tar.gz">Source</a>
+        {% endfor %}
+    </ul>
+</ul>
