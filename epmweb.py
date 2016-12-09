@@ -10,6 +10,7 @@ import json
 import re
 import sqlite3
 import argparse
+import siphash
 
 # External imports
 import sqlalchemy
@@ -25,6 +26,8 @@ from db.db import Package, Version, User
 DB = '../db/production.db'
 UPLOAD_FOLDER = '../public_html/static'
 ALLOWED_EXTENSIONS = ['tar.gz']
+
+KEY_SIPHASH = bytearray.fromhex('9664 06fe 676f 1a04 b799 059f cff6 a9a8')
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -136,6 +139,9 @@ def packages_new():
         filename = secure_filename(file.filename)
         final_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(final_filename)
+        with open(final_filename, 'rb') as package:
+            chksum = siphash.SipHash_2_4(KEY_SIPHASH, package.read()).hexdigest()
+            print(chksum)
         temporary_dir = tempfile.mkdtemp()
         subprocess.call('tar xf {} -C {}'.format(final_filename, temporary_dir), shell=True)
         with open(os.path.join(temporary_dir, 'Epm.toml'), 'r') as tomlfile:
