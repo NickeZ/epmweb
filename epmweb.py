@@ -103,7 +103,10 @@ def error(message):
     return jsonify({'code': 400, 'message': message}), status.HTTP_400_BAD_REQUEST
 
 def ok(message):
-    return jsonify({'code': 200, 'message': message})
+    return ok_data({'message': message})
+
+def ok_data(data):
+    return jsonify({'code' : 200, 'data': data})
 
 @app.route('/api/v1/users/new', methods=['POST'])
 def users_new():
@@ -186,7 +189,7 @@ def packages_new():
             version=manifest['project']['version']
         ))
         session.commit()
-    return ok('Uploaded!')
+    return ok_data({'message': 'Uploaded!', 'chksum': chksum.decode('utf-8')})
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
