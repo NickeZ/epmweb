@@ -140,14 +140,14 @@ def packages_new():
     if file and allowed_file(file.filename):
         session = Session()
         filename = secure_filename(file.filename)
-        final_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(final_filename)
-        with open(final_filename, 'rb') as package:
+        tmp_dir = tempfile.mkdtemp()
+        shutil.mkdir(os.path.join(tmp_dir, 'content'))
+        tmp_filename = os.path.join(tmp_dir, filename)
+        file.save(tmp_filename)
+        with open(tmp_filename, 'rb') as package:
             chksum = siphash.SipHash_2_4(KEY_SIPHASH, package.read()).hexdigest()
-            print(chksum)
-        temporary_dir = tempfile.mkdtemp()
-        subprocess.call('tar xf {} -C {}'.format(final_filename, temporary_dir), shell=True)
-        with open(os.path.join(temporary_dir, 'Epm.toml'), 'r') as tomlfile:
+        subprocess.call('tar xf {} -C {}'.format(tmp_filename, tmp_dir, 'content'), shell=True)
+        with open(os.path.join(tmp_dir, 'content', 'Epm.toml'), 'r') as tomlfile:
             manifest = toml.loads(tomlfile.read())
         for author in manifest['project']['authors']:
             matches = re.search(r'<(.*)>', author)
@@ -189,6 +189,8 @@ def packages_new():
             version=manifest['project']['version']
         ))
         session.commit()
+    final_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    shutil.move(final_filename, os.path.join(app.config['UPLOAD_FOLDER'], '{}-{}-{}.tar.gz'.format(name, version, chksum)))
     return ok_data({'message': 'Uploaded!', 'chksum': chksum.decode('utf-8')})
 
 if __name__ == "__main__":
