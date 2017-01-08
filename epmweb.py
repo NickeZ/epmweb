@@ -6,6 +6,8 @@ import tempfile
 import toml
 import sys
 import os
+import errno
+import shutil
 import json
 import re
 import sqlite3
@@ -86,7 +88,10 @@ def package_download(name=None, chksum=None):
             version = json.loads(line)
             if version['chksum'] == chksum:
                 tarball_filename = '{}-{}-{}.tar.gz'.format(name, version['vers'], chksum)
-                return send_from_directory(app.config['UPLOAD_FOLDER'], tarball_filename, as_attachment=True)
+                if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], tarball_filename)):
+                    return send_from_directory(app.config['UPLOAD_FOLDER'], tarball_filename, as_attachment=True)
+                else:
+                    return error('File not found')
     return error('Package not found')
 
 
@@ -129,6 +134,14 @@ def users_list():
         res.append('{}'.format(user))
     return jsonify(res)
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as why:
+        if why.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 @app.route("/api/v1/packages/new", methods=['PUT'])
 def packages_new():
@@ -141,12 +154,12 @@ def packages_new():
         session = Session()
         filename = secure_filename(file.filename)
         tmp_dir = tempfile.mkdtemp()
-        shutil.mkdir(os.path.join(tmp_dir, 'content'))
+        mkdir_p(os.path.join(tmp_dir, 'content'))
         tmp_filename = os.path.join(tmp_dir, filename)
         file.save(tmp_filename)
         with open(tmp_filename, 'rb') as package:
             chksum = siphash.SipHash_2_4(KEY_SIPHASH, package.read()).hexdigest()
-        subprocess.call('tar xf {} -C {}'.format(tmp_filename, tmp_dir, 'content'), shell=True)
+        subprocess.call('tar xf {} -C {}'.format(tmp_filename, os.path.join(tmp_dir, 'content')), shell=True)
         with open(os.path.join(tmp_dir, 'content', 'Epm.toml'), 'r') as tomlfile:
             manifest = toml.loads(tomlfile.read())
         for author in manifest['project']['authors']:
@@ -168,29 +181,36 @@ def packages_new():
             repo = manifest['project']['repository']
         else:
             repo = None
-        pak = session.query(Package).filter_by(name=manifest['project']['name']).first()
+        if 'name' in manifest['project']:
+            name = manifest['project']['name']
+        else:
+            return error('Missing name in manifest file')
+        if 'version' in manifest['project']:
+            version = manifest['project']['version']
+        else:
+            return error('Missing version in manifest file')
+        pak = session.query(Package).filter_by(name=name).first()
         if not pak:
             pak = Package(
                 user_id=user.id,
-                name=manifest['project']['name'],
-                max_version=manifest['project']['version'],
+                name=name,
+                max_version=version,
                 description=desc,
                 repository=repo,
             )
             session.add(pak)
             session.commit()
         else:
-            pak.max_version = manifest['project']['version']
+            pak.max_version = version
             pak.description = desc
             pak.repository = repo
             pak.updated = datetime.now()
         session.add(Version(
             package_id=pak.id,
-            version=manifest['project']['version']
+            version=version
         ))
         session.commit()
-    final_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    shutil.move(final_filename, os.path.join(app.config['UPLOAD_FOLDER'], '{}-{}-{}.tar.gz'.format(name, version, chksum)))
+    shutil.move(tmp_filename, os.path.join(app.config['UPLOAD_FOLDER'], '{}-{}-{}.tar.gz'.format(name, version, chksum.decode('utf-8'))))
     return ok_data({'message': 'Uploaded!', 'chksum': chksum.decode('utf-8')})
 
 if __name__ == "__main__":
