@@ -1,0 +1,6 @@
+sqlite3_db = "db/dev.db"
+
+upload_folder = "public_html/static"
+allowed_extensions = ["tar.gz"]
+
+# server_name = "example.com"

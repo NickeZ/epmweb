@@ -25,15 +25,21 @@ from werkzeug.utils import secure_filename
 # External local imports
 from db.db import Package, Version, User
 
-DB = '../db/production.db'
-UPLOAD_FOLDER = '../public_html/static'
-ALLOWED_EXTENSIONS = ['tar.gz']
+# Import config
+
+with open('config/epmweb.toml') as configfile:
+    config = toml.loads(configfile.read())
+
+DB = os.path.join('..', config['sqlite3_db'])
+UPLOAD_FOLDER = os.path.join('..', config['upload_folder'])
+ALLOWED_EXTENSIONS = config['allowed_extensions']
 
 KEY_SIPHASH = bytearray.fromhex('9664 06fe 676f 1a04 b799 059f cff6 a9a8')
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['SERVER_NAME'] = 'epics.ncic.se'
+app.config['UPLOAD_FOLDER'] = config['upload_folder']
+if 'server_name' in config:
+    app.config['SERVER_NAME'] = config['server_name']
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 Markdown(app)
